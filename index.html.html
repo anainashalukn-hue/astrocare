@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ASTROCARE – Astronaut Self-Health Monitoring</title>
+<style>
+:root{--bg:#0b1424;--panel:#13213a;--line:#25395c;--text:#e8eef9;--mute:#9fb0cc;--accent:#4fd1c5;--warn:#f6ad55;--bad:#fc6f6f;--ok:#68d391;color-scheme:dark;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+*{box-sizing:inherit}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.55 "Trebuchet MS",Verdana,sans-serif}
+main{max-width:920px;margin:0 auto;padding:20px 16px 48px}
+h1,h2,h3{font-family:Georgia,"Times New Roman",serif;line-height:1.2;margin:0 0 .5em}
+h1{font-size:2.2rem}h2{font-size:1.4rem;margin-top:0}
+.hero{padding:28px 0 12px;border-bottom:1px solid var(--line);margin-bottom:20px}
+.hero p{color:var(--mute);max-width:60ch;margin:.3em 0}
+.tag{display:inline-block;border:1px solid var(--accent);color:var(--accent);border-radius:99px;padding:2px 12px;font-size:.85rem}
+section{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:18px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+label{display:block;font-size:.9rem;color:var(--mute)}
+input,select{width:100%;margin-top:4px;padding:10px;border-radius:8px;border:1px solid var(--line);background:#0e1a30;color:var(--text);font:inherit}
+input[type=range]{padding:0}
+button{font:inherit;cursor:pointer;border-radius:8px;border:1px solid var(--accent);background:transparent;color:var(--accent);padding:10px 16px}
+button.primary{background:var(--accent);color:#06222a;font-weight:bold}
+button[aria-pressed=true],button.on{background:var(--accent);color:#06222a}
+:focus-visible{outline:3px solid #fff;outline-offset:2px}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+.res{list-style:none;padding:0;margin:12px 0 0}
+.res li{padding:10px 12px;border-radius:8px;margin-bottom:8px;border-left:5px solid var(--ok);background:#0e1a30}
+.res li.warn{border-color:var(--warn)}.res li.bad{border-color:var(--bad)}
+.status{font-weight:bold}
+svg{width:100%;height:auto;display:block}
+.note{color:var(--mute);font-size:.85rem}
+.rem{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
+.rem div{background:#0e1a30;border-radius:10px;padding:12px}
+.rem b{color:var(--accent)}
+footer{color:var(--mute);font-size:.85rem;border-top:1px solid var(--line);padding-top:14px}
+</style></head><body><main>
+<header class="hero"><span class="tag">NASA Space Apps Challenge prototype</span>
+<h1>ASTROCARE</h1>
+<p>A daily health check-in for astronauts on long missions. Enter how you feel, see what stands out, and know when to talk to your flight surgeon.</p></header>
+
+<section id="checkin"><h2>Daily check-in</h2>
+<div class="grid">
+<label>Heart rate (bpm)<input id="hr" type="number" value="68"></label>
+<label>Systolic BP (mmHg)<input id="sys" type="number" value="118"></label>
+<label>Diastolic BP (mmHg)<input id="dia" type="number" value="76"></label>
+<label>Body temp (°C)<input id="temp" type="number" step="0.1" value="36.7"></label>
+<label>Sleep (hours)<input id="sleep" type="number" step="0.5" value="7"></label>
+<label>Mood<select id="mood"><option value="5">Great</option><option value="4" selected>Good</option><option value="3">Okay</option><option value="2">Low</option><option value="1">Very low</option></select></label>
+</div>
+<label style="margin-top:12px">Stress level: <b id="sv">3</b> / 10<input id="stress" type="range" min="1" max="10" value="3"></label>
+<div class="row"><button class="primary" id="go">Analyse my check-in</button><button id="reset">Reset</button></div>
+<div id="out" aria-live="polite"></div></section>
+
+<section><h2>Health trend</h2>
+<div class="row" id="tabs"></div>
+<svg id="chart" viewBox="0 0 600 220" role="img" aria-label="Trend chart"></svg>
+<p class="note">Illustrative data for the past 7 days. Each check-in you submit is added as a new point (kept only while this page is open).</p></section>
+
+<section><h2>How spaceflight affects your body</h2>
+<div class="row" id="sys-tabs"></div><div id="sys-body"></div></section>
+
+<section><h2>Daily preventive reminders</h2>
+<div class="rem">
+<div><b>Exercise</b><br>Complete your mission-approved resistance and cardio sessions to protect bones and muscles.</div>
+<div><b>Sleep</b><br>Keep a regular sleep schedule and dim lights before bed.</div>
+<div><b>Hydration</b><br>Drink fluids regularly. Thirst signals are weaker in microgravity.</div>
+<div><b>Nutrition</b><br>Eat all planned meals, with enough protein, calcium and vitamin D.</div>
+<div><b>Crew wellbeing</b><br>Talk with crewmates, keep a routine, and contact family and support teams.</div>
+</div></section>
+
+<footer><b>Please note:</b> ASTROCARE is an educational prototype made for the NASA Space Apps Challenge. It uses simple illustrative rules, not medical thresholds, and is not a medical device. It does not diagnose anything. In a real mission, always follow your flight surgeon's guidance. Nothing you enter leaves your browser.<br><br>Future versions: secure data storage, wearable sensors, personal baselines and mission-approved alert limits.</footer>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+const data={hr:[66,68,70,67,72,69,68],sleep:[7.5,7,6.5,7,6,7.5,7],stress:[3,3,4,3,5,4,3]};
+const meta={hr:['Heart rate','bpm'],sleep:['Sleep','hours'],stress:['Stress','/10']};
+let cur='hr';
+$('stress').oninput=e=>$('sv').textContent=e.target.value;
+function draw(){
+ const d=data[cur],w=600,h=220,p=34;
+ const mn=Math.min(...d)-1,mx=Math.max(...d)+1;
+ const x=i=>p+i*(w-2*p)/Math.max(d.length-1,1),y=v=>h-p-(v-mn)/(mx-mn)*(h-2*p);
+ let s=`<line x1="${p}" y1="${h-p}" x2="${w-p}" y2="${h-p}" stroke="#25395c"/><line x1="${p}" y1="${p-10}" x2="${p}" y2="${h-p}" stroke="#25395c"/>`;
+ s+=`<text x="${p}" y="14" fill="#9fb0cc" font-size="13">${meta[cur][0]} (${meta[cur][1]})</text>`;
+ s+=`<text x="4" y="${y(mx)+4}" fill="#9fb0cc" font-size="11">${mx.toFixed(0)}</text><text x="4" y="${y(mn)+4}" fill="#9fb0cc" font-size="11">${mn.toFixed(0)}</text>`;
+ s+=`<polyline fill="none" stroke="#4fd1c5" stroke-width="3" points="${d.map((v,i)=>x(i)+','+y(v)).join(' ')}"/>`;
+ d.forEach((v,i)=>{s+=`<circle cx="${x(i)}" cy="${y(v)}" r="${i>6?6:4}" fill="${i>6?'#f6ad55':'#4fd1c5'}"/>`;});
+ s+=`<text x="${p}" y="${h-8}" fill="#9fb0cc" font-size="11">Oldest</text><text x="${w-p-30}" y="${h-8}" fill="#9fb0cc" font-size="11">Latest</text>`;
+ $('chart').innerHTML=s;
+ $('tabs').innerHTML='';
+ for(const k in meta){const b=document.createElement('button');b.textContent=meta[k][0];b.setAttribute('aria-pressed',k===cur);b.onclick=()=>{cur=k;draw()};$('tabs').appendChild(b);}
+}
+function analyse(){
+ const v=k=>parseFloat($(k).value);
+ const hr=v('hr'),sy=v('sys'),di=v('dia'),t=v('temp'),sl=v('sleep'),mo=v('mood'),st=v('stress');
+ if([hr,sy,di,t,sl].some(isNaN)){$('out').innerHTML='<p class="status">Please fill in every number before analysing.</p>';return}
+ const r=[];const add=(lvl,txt)=>r.push([lvl,txt]);
+ if(hr>120||hr<40)add('bad','Heart rate '+hr+' bpm is well outside the usual resting range. Rest, recheck, and contact your flight surgeon.');
+ else if(hr>100||hr<50)add('warn','Heart rate '+hr+' bpm is outside the typical resting range (about 50–100). Rest and recheck in a few minutes.');
+ else add('ok','Heart rate looks steady.');
+ if(sy>=160||di>=100||sy<80)add('bad','Blood pressure '+sy+'/'+di+' is far from the usual range. Recheck and report it to the medical team.');
+ else if(sy>=130||di>=85||sy<90||di<55)add('warn','Blood pressure '+sy+'/'+di+' is a little off the usual range. Recheck after resting and compare with your own baseline.');
+ else add('ok','Blood pressure looks normal.');
+ if(t>=38.5||t<35)add('bad','Body temperature '+t+' °C needs attention. Contact the medical team.');
+ else if(t>=37.5||t<35.8)add('warn','Body temperature '+t+' °C is slightly off. Recheck later and watch for other symptoms.');
+ else add('ok','Body temperature looks normal.');
+ if(sl<5)add('bad','Only '+sl+' hours of sleep. Poor sleep affects judgement and safety. Tell the crew surgeon and protect tonight\'s rest.');
+ else if(sl<6.5)add('warn','Sleep was short ('+sl+' h). Try a calm wind-down and a fixed bedtime.');
+ else add('ok','Sleep duration looks healthy.');
+ if(mo<=2||st>=8)add('bad','Mood and stress show you are struggling. Talk to a crewmate or the behavioural health team today.');
+ else if(mo===3||st>=6)add('warn','Stress or mood needs care. Try a short break, exercise, or a call with family.');
+ else add('ok','Mood and stress look balanced.');
+ const worst=r.some(x=>x[0]==='bad')?'bad':r.some(x=>x[0]==='warn')?'warn':'ok';
+ const head={ok:'All readings look within illustrative normal ranges. Keep up your routine.',warn:'Some readings may need attention. Review the points below.',bad:'One or more readings need prompt attention. Consider contacting your mission medical team.'}[worst];
+ $('out').innerHTML='<p class="status">'+head+'</p><ul class="res">'+r.map(x=>'<li class="'+(x[0]==='ok'?'':x[0])+'">'+x[1]+'</li>').join('')+'</ul><p class="note">Illustrative rules only. Compare with your personal baseline and follow mission medical guidance.</p>';
+ data.hr.push(hr);data.sleep.push(sl);data.stress.push(st);draw();
+}
+$('go').onclick=analyse;
+$('reset').onclick=()=>{$('hr').value=68;$('sys').value=118;$('dia').value=76;$('temp').value=36.7;$('sleep').value=7;$('mood').value=4;$('stress').value=3;$('sv').textContent=3;$('out').innerHTML=''};
+const sysd={
+ 'Heart & blood vessels':'Without gravity, fluid shifts toward the head and the heart does less work against gravity. Over time this can change heart shape and blood pressure control. Regular cardio helps.',
+ 'Bones & muscles':'Weight-bearing loads drop in microgravity, so bones can lose density and muscles can weaken. Resistance exercise, calcium and vitamin D help protect them.',
+ 'Immune system':'Stress, disrupted sleep and the closed environment can change immune responses, and dormant viruses may reactivate. Good rest, nutrition and hygiene support immunity.',
+ 'Sleep & body clock':'A spacecraft sees many sunrises a day, which confuses the body clock. A fixed schedule and controlled lighting improve sleep.',
+ 'Mind & mood':'Isolation, confinement and distance from Earth can raise stress and lower mood. Social contact, routine and early conversations with support teams matter.',
+ 'Radiation':'Space radiation can raise long-term health risks, including to the heart and eyes. Shielding and mission rules limit exposure; report symptoms to the medical team.'};
+function showSys(k){
+ $('sys-body').innerHTML='<h3>'+k+'</h3><p>'+sysd[k]+'</p>';
+ [...$('sys-tabs').children].forEach(b=>b.setAttribute('aria-pressed',b.textContent===k));
+}
+for(const k in sysd){const b=document.createElement('button');b.textContent=k;b.onclick=()=>showSys(k);$('sys-tabs').appendChild(b);}
+showSys('Heart & blood vessels');draw();
+</script></body></html>
